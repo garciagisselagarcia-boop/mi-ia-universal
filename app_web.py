@@ -20,10 +20,10 @@ if not api_key:
 # Inicializar cliente de Gemini
 client = genai.Client(api_key=api_key)
 
-# Lista de modelos oficiales y estables
+# Lista de modelos actualizados según las directrices de la API
 modelo_seleccionado = st.selectbox(
     "Choisissez le modèle d'IA :",
-    ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]
+    ["gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.0-flash"]
 )
 
 # Carga de archivos
@@ -38,9 +38,8 @@ if st.button("Envoyer à l'IA"):
             try:
                 contenido = []
                 
-                # Procesar el archivo si existe de forma segura para evitar errores de caracteres especiales
+                # Procesar el archivo de forma segura para evitar errores de caracteres especiales (como la Ñ)
                 if fichier_charge is not None:
-                    # Limpiar el nombre del archivo (eliminar acentos y eñes para evitar errores de ASCII)
                     nom_nettoye = unicodedata.normalize('NFKD', fichier_charge.name).encode('ascii', 'ignore').decode('ascii')
                     if not nom_nettoye:
                         nom_nettoye = "document.pdf"
