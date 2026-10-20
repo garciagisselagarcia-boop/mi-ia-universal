@@ -17,10 +17,10 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# Usamos exactamente el modelo que exige la API de Google
+# Modèle principal mis sur gemini-2.0-flash pour éviter les saturations
 modelo_seleccionado = st.selectbox(
     "Choisissez le modèle d'IA :",
-    ["gemini-3.8-flash", "gemini-2.0-flash"]
+    ["gemini-2.0-flash", "gemini-3.8-flash"]
 )
 
 fichier_charge = st.file_uploader("Choisissez un fichier", type=["pdf", "png", "jpg", "jpeg", "mp3", "wav", "txt", "mp4"])
