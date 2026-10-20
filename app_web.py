@@ -18,7 +18,7 @@ client = genai.Client(api_key=api_key)
 
 modelo_seleccionado = st.selectbox(
     "Choisissez le modèle d'IA :",
-    ["gemini-2.5-flash", "gemini-2.5-pro"]
+    ["gemini-3.8-flash", "gemini-1.5-pro"]
 )
 
 fichier_charge = st.file_uploader("Choisissez un fichier", type=["pdf", "png", "jpg", "jpeg", "mp3", "wav", "txt", "mp4"])
