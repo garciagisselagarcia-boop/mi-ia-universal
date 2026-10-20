@@ -1,6 +1,1 @@
-[theme]
-primaryColor = "#4F46E5"          # Color de botones y resaltados (Morado/Azul elegante)
-backgroundColor = "#0F172A"       # Fondo principal (Azul muy oscuro)
-secondaryBackgroundColor = "#1E293B" # Fondo de cajas y file uploader
-textColor = "#F8FAFC"             # Color del texto (Blanco/Gris claro)
-font = "sans serif"
+
