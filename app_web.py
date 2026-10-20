@@ -1,9 +1,10 @@
 import os
 import tempfile
+import unicodedata
 import streamlit as st
 from google import genai
 
-# Configuración de la página
+# Configuration de la page
 st.set_page_config(page_title="Mi IA Universal", page_icon="🤖")
 
 st.title("🤖 Mon Assistant IA Universel")
@@ -37,9 +38,14 @@ if st.button("Envoyer à l'IA"):
             try:
                 contenido = []
                 
-                # Procesar el archivo si existe usando un archivo temporal
+                # Procesar el archivo si existe de forma segura para evitar errores de caracteres especiales
                 if fichier_charge is not None:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix="_" + fichier_charge.name) as tmp:
+                    # Limpiar el nombre del archivo (eliminar acentos y eñes para evitar errores de ASCII)
+                    nom_nettoye = unicodedata.normalize('NFKD', fichier_charge.name).encode('ascii', 'ignore').decode('ascii')
+                    if not nom_nettoye:
+                        nom_nettoye = "document.pdf"
+                        
+                    with tempfile.NamedTemporaryFile(delete=False, suffix="_" + nom_nettoye) as tmp:
                         tmp.write(fichier_charge.getvalue())
                         tmp_path = tmp.name
                     
