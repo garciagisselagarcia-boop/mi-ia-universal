@@ -3,88 +3,90 @@ import tempfile
 import unicodedata
 import streamlit as st
 from google import genai
-from openai import OpenAI
 
-st.set_page_config(page_title="Mi IA Universal", page_icon="🤖")
+# Configuración de la página orientada a estudio
+st.set_page_config(page_title="Mi Asistente de Estudios IA", page_icon="📚", layout="centered")
 
-st.title("🤖 Mon Assistant IA Universel")
-st.write("Bienvenue ! Téléchargez n'importe quel fichier ou posez-moi une question.")
+st.title("📚 Mi Asistente de Estudios IA")
+st.write("Sube tus documentos de estudio (PDFs, apuntes, imágenes de esquemas, audios de clases) o hazme preguntas directas.")
 
-# Cargar claves de API
-gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
-openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+# Obtener la clave API de forma segura
+api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
-# Selector de Proveedor y Modelo
-proveedor_modelo = st.selectbox(
-    "Choisissez le modèle d'IA :",
+if not api_key:
+    st.error("⚠️ La clave API 'GEMINI_API_KEY' no está configurada en los Secrets de Streamlit.")
+    st.stop()
+
+# Inicializar cliente de Google GenAI
+client = genai.Client(api_key=api_key)
+
+# Opciones rápidas para estudiar
+modo_estudio = st.selectbox(
+    "¿Qué quieres hacer con tu material?",
     [
-        "Gemini (gemini-3.8-flash)", 
-        "ChatGPT (gpt-4o-mini)", 
-        "ChatGPT (gpt-4o)"
+        "💬 Pregunta libre / Explicación general",
+        "📝 Resumir documento clave por clave",
+        "❓ Generar preguntas de examen (Quiz) para practicar",
+        "🎯 Explicar como si tuviera 5 años (Simplificar conceptos difíciles)"
     ]
 )
 
-fichier_charge = st.file_uploader("Choisissez un fichier", type=["pdf", "png", "jpg", "jpeg", "mp3", "wav", "txt", "mp4"])
-pregunta = st.text_input("Que voulez-vous savoir sur ce fichier ou poser comme question ?")
+# Carga de archivos de estudio (PDF, imágenes de pizarrones, audios de explicaciones, etc.)
+archivo_estudio = st.file_uploader(
+    "Sube tu archivo de estudio (PDF, imagen, audio, texto)", 
+    type=["pdf", "png", "jpg", "jpeg", "mp3", "wav", "txt"]
+)
 
-if st.button("Envoyer à l'IA"):
-    if not pregunta and not fichier_charge:
-        st.warning("Veuillez saisir une question ou télécharger un fichier.")
+pregunta_usuario = st.text_area(
+    "Escribe tu duda, pega un texto o indica qué parte del documento quieres trabajar:",
+    placeholder="Ejemplo: Explícame los puntos principales de la página 3 o hazme un resumen de este tema..."
+)
+
+if st.button("Analizar y Estudiar 🚀"):
+    if not pregunta_usuario and not archivo_estudio:
+        st.warning("Por favor, sube un archivo o escribe una pregunta para empezar a estudiar.")
     else:
-        with st.spinner("L'IA réfléchit..."):
+        with st.spinner("🧠 Tu asistente está procesando la información..."):
             try:
-                # --- RAMA DE GEMINI ---
-                if "Gemini" in proveedor_modelo:
-                    if not gemini_api_key:
-                        st.error("⚠️ La clé API 'GEMINI_API_KEY' n'est pas configurée.")
-                        st.stop()
-                    
-                    client_gemini = genai.Client(api_key=gemini_api_key)
-                    contenido = []
-                    
-                    if fichier_charge is not None:
-                        nom_nettoye = unicodedata.normalize('NFKD', fichier_charge.name).encode('ascii', 'ignore').decode('ascii')
-                        if not nom_nettoye:
-                            nom_nettoye = "document.pdf"
-                            
-                        with tempfile.NamedTemporaryFile(delete=False, suffix="_" + nom_nettoye) as tmp:
-                            tmp.write(fichier_charge.getvalue())
-                            tmp_path = tmp.name
+                contenido = []
+                
+                # Procesar archivo si el usuario subió uno
+                if archivo_estudio is not None:
+                    # Limpiar nombre del archivo para evitar errores de codificación
+                    nombre_limpio = unicodedata.normalize('NFKD', archivo_estudio.name).encode('ascii', 'ignore').decode('ascii')
+                    if not nombre_limpio:
+                        nombre_limpio = "documento_estudio.pdf"
                         
-                        archivo_subido = client_gemini.files.upload(file=tmp_path)
-                        contenido.append(archivo_subido)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix="_" + nombre_limpio) as tmp:
+                        tmp.write(archivo_estudio.getvalue())
+                        tmp_path = tmp.name
                     
-                    if pregunta:
-                        contenido.append(pregunta)
-                    else:
-                        contenido.append("Analyse ce fichier en détail s'il te plaît.")
+                    archivo_subido = client.files.upload(file=tmp_path)
+                    contenido.append(archivo_subido)
+                
+                # Construir el prompt guiado según el modo de estudio seleccionado
+                instruccion_modo = ""
+                if "Resumir" in modo_estudio:
+                    instruccion_modo = "Por favor, genera un resumen estructurado, claro y con viñetas de los puntos clave de este material de estudio: "
+                elif "Quiz" in modo_estudio:
+                    instruccion_modo = "A partir de este material, genérame 5 preguntas tipo test o de repaso con sus respectivas respuestas correctas para poner a prueba mis conocimientos: "
+                elif "Simplificar" in modo_estudio:
+                    instruccion_modo = "Explícame los conceptos complejos de este contenido de forma muy sencilla, con analogías fáciles de entender: "
+                else:
+                    instruccion_modo = "Analiza detalladamente este material de estudio y responde a la siguiente consulta: "
 
-                    response = client_gemini.models.generate_content(
-                        model="gemini-3.8-flash",
-                        contents=contenido
-                    )
-                    st.subheader("Réponse (Gemini) :")
-                    st.write(response.text)
+                prompt_final = instruccion_modo + (pregunta_usuario if pregunta_usuario else "Explícame este documento en detalle para estudiar.")
+                contenido.append(prompt_final)
 
-                # --- RAMA DE OPENAI (CHATGPT) ---
-                elif "ChatGPT" in proveedor_modelo:
-                    if not openai_api_key:
-                        st.error("⚠️ La clé API 'OPENAI_API_KEY' n'est pas configurée dans les Secrets.")
-                        st.stop()
-                    
-                    client_openai = OpenAI(api_key=openai_api_key)
-                    modelo_openai = "gpt-4o-mini" if "gpt-4o-mini" in proveedor_modelo else "gpt-4o"
-                    
-                    # Nota: OpenAI requiere texto como prompt principal
-                    prompt_texto = pregunta if pregunta else "Analyse ce fichier s'il te plaît."
-                    
-                    completion = client_openai.chat.completions.create(
-                        model=modelo_openai,
-                        messages=[{"role": "user", "content": prompt_texto}]
-                    )
-                    
-                    st.subheader(f"Réponse ({modelo_openai}) :")
-                    st.write(completion.choices[0].message.content)
-
+                # Llamada oficial al modelo estable de Google
+                response = client.models.generate_content(
+                    model="gemini-3.8-flash",
+                    contents=contenido
+                )
+                
+                st.markdown("---")
+                st.subheader("📖 Resultado de tu estudio:")
+                st.markdown(response.text)
+                
             except Exception as e:
-                st.error(f"Une erreur s'est produite : {e}")
+                st.error(f"Ocurrió un error al procesar tu solicitud: {e}")
